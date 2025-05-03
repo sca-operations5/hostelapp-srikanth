@@ -1,27 +1,17 @@
+import { createClient } from '@supabase/supabase-js'
 
-    import { createClient } from '@supabase/supabase-js'
+// Ensure your environment variables are set.
+// You can create a .env file in your project root:
+// VITE_SUPABASE_URL=YOUR_SUPABASE_URL
+// VITE_SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_KEY
 
-    const supabaseUrl = "https://paakuvaheiweqojxcfyk.supabase.co";
-    const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBhYWt1dmFoZWl3ZXFvanhjZnlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYwMDQ0NTgsImV4cCI6MjA2MTU4MDQ1OH0.-IcmLZqybaqKBuAUqijUUYyNwPoTSCrtrT5mBuW4oS4";
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
-    if (!supabaseUrl || !supabaseAnonKey) {
-      console.error("Supabase URL or Anon Key is missing. Make sure environment variables are set.");
-      // Optionally throw an error or handle this scenario appropriately
-      // throw new Error("Supabase credentials missing.");
-    }
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error("Supabase URL and Anon Key must be provided in environment variables.");
+}
 
-    export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-       auth: {
-         // Options like persistSession, autoRefreshToken can be set here if needed
-         // persistSession: true,
-         // autoRefreshToken: true,
-       },
-       global: {
-         fetch: (...args) => {
-           // Basic fetch wrapper for potential future logging or header injection
-           // console.log('Supabase fetch called with:', args);
-           return fetch(...args);
-         }
-       }
-     });
+export const supabase = createClient(supabaseUrl, supabaseAnonKey)
   
+

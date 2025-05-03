@@ -22,6 +22,7 @@ import { NotificationProvider } from "@/contexts/NotificationContext";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import RoleBasedRoute from "@/components/RoleBasedRoute";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import ComplaintForm from './components/ComplaintForm';
 
 const AppContent = () => {
   const { user, loading, error } = useAuth();
@@ -186,6 +187,10 @@ function App() {
           <div className="min-h-screen bg-background">
             <AppContent />
             <Toaster />
+            <div className="container mx-auto p-4">
+              <h1 className="text-3xl font-bold text-center mb-6">Hostel Complaint System MVP</h1>
+              <ComplaintForm />
+            </div>
           </div>
         </Router>
       </NotificationProvider>
