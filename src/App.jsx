@@ -22,10 +22,10 @@ import { NotificationProvider } from "@/contexts/NotificationContext";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import RoleBasedRoute from "@/components/RoleBasedRoute";
 import ProtectedRoute from "@/components/ProtectedRoute";
-import ComplaintForm from './components/ComplaintForm';
+import BranchSelector from "@/components/BranchSelector";
 
 const AppContent = () => {
-  const { user, loading, error } = useAuth();
+  const { user, profile, loading, error } = useAuth();
 
   if (loading) {
     return (
@@ -51,6 +51,7 @@ const AppContent = () => {
   return (
     <Routes>
       <Route path="/login" element={!user ? <Login /> : <Navigate to="/" />} />
+      <Route path="/select-branch" element={<BranchSelector />} />
       <Route path="/unauthorized" element={<Unauthorized />} />
       <Route
         path="/"
@@ -82,7 +83,7 @@ const AppContent = () => {
         <Route
           path="complaints"
           element={
-            <RoleBasedRoute allowedRoles={['warden', 'incharge', 'student']}>
+            <RoleBasedRoute allowedRoles={['admin', 'warden', 'incharge']}>
               <ComplaintSystem />
             </RoleBasedRoute>
           }
@@ -181,20 +182,16 @@ const AppContent = () => {
 
 function App() {
   return (
-    <AuthProvider>
-      <NotificationProvider>
-        <Router>
+    <Router>
+      <AuthProvider>
+        <NotificationProvider>
           <div className="min-h-screen bg-background">
             <AppContent />
             <Toaster />
-            <div className="container mx-auto p-4">
-              <h1 className="text-3xl font-bold text-center mb-6">Hostel Complaint System MVP</h1>
-              <ComplaintForm />
-            </div>
           </div>
-        </Router>
-      </NotificationProvider>
-    </AuthProvider>
+        </NotificationProvider>
+      </AuthProvider>
+    </Router>
   );
 }
 

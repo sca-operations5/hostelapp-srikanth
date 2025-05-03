@@ -1,91 +1,90 @@
-import { createContext, useContext, useEffect, useState } from 'react'
+import React, { createContext, useContext, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { useNavigate, useLocation } from 'react-router-dom'
 
 const AuthContext = createContext({})
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [userRole, setUserRole] = useState(null)
-  const [permissions, setPermissions] = useState([])
+  const [profile, setProfile] = useState(null)
+  const [loadingInitial, setLoadingInitial] = useState(true)
+  const [loadingAuthChange, setLoadingAuthChange] = useState(false)
+  const [error, setError] = useState(null)
 
   useEffect(() => {
-    // Check active sessions and sets the user
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null)
-      if (session?.user) {
-        fetchUserRole(session.user.id)
+    setLoadingInitial(true)
+    setError(null)
+
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      const currentUser = session?.user ?? null
+      setUser(currentUser)
+      if (currentUser) {
+        await fetchUserProfile(currentUser)
       } else {
-        setLoading(false)
+        setProfile(null)
       }
+      setLoadingInitial(false)
+    }).catch(err => {
+      console.error("Error getting initial session:", err)
+      setError("Failed to initialize session.")
+      setUser(null)
+      setProfile(null)
+      setLoadingInitial(false)
     })
 
-    // Listen for changes on auth state (sign in, sign out, etc.)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setUser(session?.user ?? null)
-      if (session?.user) {
-        await fetchUserRole(session.user.id)
-      } else {
-        setUserRole(null)
-        setPermissions([])
-        setLoading(false)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (_event, session) => {
+        console.log("Auth state changed:", _event, session)
+        setLoadingAuthChange(true)
+        setError(null)
+        const currentUser = session?.user ?? null
+        setUser(currentUser)
+        if (currentUser) {
+          await fetchUserProfile(currentUser)
+        } else {
+          setProfile(null)
+        }
+        setLoadingAuthChange(false)
       }
-    })
+    )
 
-    return () => subscription.unsubscribe()
+    return () => subscription?.unsubscribe()
   }, [])
 
-  const fetchUserRole = async (userId) => {
+  const fetchUserProfile = async (currentUser) => {
+    if (!currentUser) {
+      setProfile(null)
+      return null
+    }
+
     try {
-      // First check if user is staff
-      const { data: staffData, error: staffError } = await supabase
-        .from('staff')
-        .select('role, permissions')
-        .eq('user_id', userId)
+      setError(null)
+      const { data, error: profileError } = await supabase
+        .from('profiles')
+        .select('id, assigned_branch_id, role')
+        .eq('id', currentUser.id)
         .single()
 
-      if (staffError && staffError.code !== 'PGRST116') {
-        console.error('Error fetching staff role:', staffError)
-        setLoading(false)
-        return
+      if (profileError && profileError.code !== 'PGRST116') {
+        console.error('Error fetching profile:', profileError)
+        setError('Failed to fetch user profile.')
+        setProfile(null)
+        return null
       }
 
-      if (staffData) {
-        setUserRole(staffData.role)
-        setPermissions(staffData.permissions || [])
-        setLoading(false)
-        return
+      if (data) {
+        setProfile(data)
+        return data
+      } else {
+        console.log(`No profile found for user ${currentUser.id}. Account setup might be pending.`)
+        setProfile(null)
+        return null
       }
-
-      // If not staff, check if student
-      const { data: studentData, error: studentError } = await supabase
-        .from('students')
-        .select('id')
-        .eq('user_id', userId)
-        .single()
-
-      if (studentError && studentError.code !== 'PGRST116') {
-        console.error('Error fetching student data:', studentError)
-        setLoading(false)
-        return
-      }
-
-      if (studentData) {
-        setUserRole('student')
-        setPermissions(['view_own_profile', 'view_own_attendance', 'submit_complaints'])
-        setLoading(false)
-        return
-      }
-
-      // If no role found, set as guest
-      setUserRole('guest')
-      setPermissions([])
-      setLoading(false)
-    } catch (error) {
-      console.error('Error fetching user role:', error)
-      setUserRole(null)
-      setPermissions([])
-      setLoading(false)
+    } catch (err) {
+      console.error('Unexpected error fetching profile:', err)
+      setError('An unexpected error occurred while fetching the user profile.')
+      setProfile(null)
+      return null
     }
   }
 
@@ -98,34 +97,35 @@ export const AuthProvider = ({ children }) => {
       if (error) throw error
       return { data, error: null }
     } catch (error) {
+      console.error('Sign in error:', error)
+      setError(error.message || 'Failed to sign in.')
       return { data: null, error }
     }
   }
 
   const signOut = async () => {
     try {
+      setError(null)
       const { error } = await supabase.auth.signOut()
       if (error) throw error
-      setUserRole(null)
-      setPermissions([])
       return { error: null }
     } catch (error) {
+      console.error('Sign out error:', error)
+      setError(error.message || 'Failed to sign out.')
       return { error }
     }
   }
 
-  const hasPermission = (permission) => {
-    return permissions.includes(permission)
-  }
-
   const value = {
     user,
-    userRole,
-    permissions,
-    loading,
+    profile,
+    isLoggedIn: !!user,
+    isProfileSetupComplete: !!profile?.role,
+    userRole: profile?.role || null,
+    isLoading: loadingInitial || loadingAuthChange,
+    error,
     signIn,
     signOut,
-    hasPermission,
   }
 
   return (
@@ -136,6 +136,10 @@ export const AuthProvider = ({ children }) => {
 }
 
 export const useAuth = () => {
-  return useContext(AuthContext)
+  const context = useContext(AuthContext)
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider')
+  }
+  return context
 }
   
