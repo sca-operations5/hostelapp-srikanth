@@ -1,23 +1,43 @@
+import React from 'react';
+import { motion } from 'framer-motion';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Building, Users } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 
-    import React from 'react';
-    import { motion } from 'framer-motion';
-    import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-    import { Building, Users } from 'lucide-react';
+const BranchStats = ({ branches, isLoading = false }) => {
+  // Prepare placeholder slots
+  const placeholders = Array.from({ length: 4 });
 
-    const BranchStats = ({ branches }) => {
-      return (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-        >
-          <Card>
-            <CardHeader>
-              <CardTitle>Branch Overview</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {branches.map((branch, index) => (
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.2 }}
+    >
+      <Card>
+        <CardHeader>
+          <CardTitle>Branch Overview</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {isLoading
+              ? placeholders.map((_, index) => (
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: index * 0.05 }}
+                    className="p-4 bg-muted/50 rounded-lg border"
+                  >
+                    <Skeleton className="h-5 w-1/2 mb-2" />
+                    <Skeleton className="h-4 w-3/4 mb-1" />
+                    <div className="flex items-center space-x-4">
+                      <Skeleton className="h-4 w-16" />
+                      <Skeleton className="h-4 w-16" />
+                    </div>
+                  </motion.div>
+                ))
+              : branches.map((branch, index) => (
                   <motion.div
                     key={branch.id}
                     initial={{ opacity: 0, scale: 0.9 }}
@@ -41,12 +61,12 @@
                     </div>
                   </motion.div>
                 ))}
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-      );
-    };
+          </div>
+        </CardContent>
+      </Card>
+    </motion.div>
+  );
+};
 
-    export default BranchStats;
+export default BranchStats;
   
