@@ -150,10 +150,12 @@ const addTransformIndexHtml = {
 	},
 };
 
-console.warn = () => {};
+// console.warn = () => {}; // Keep if needed
 
 export default defineConfig({
-	plugins: [react(), addTransformIndexHtml],
+	// Remove PWA plugin from the array for diagnosis
+	// plugins: [react(), pwa(), addTransformIndexHtml], 
+    plugins: [react(), addTransformIndexHtml], // Keep react() and Hostinger plugin
 	server: {
 		cors: true,
 		headers: {

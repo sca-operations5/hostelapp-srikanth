@@ -5,30 +5,27 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { format } from 'date-fns'; // For formatting dates
-import ComplaintForm from './ComplaintForm'; // Reuse the form for staff submissions
+import { format, parseISO } from 'date-fns';
+import ComplaintForm from './ComplaintForm';
+import ManageComplaintDialog from './ManageComplaintDialog';
+import { Pencil } from 'lucide-react';
+
+// Role check removed for prototype
+// const complaintManagerRoles = ['admin', 'warden', 'repair_person'];
 
 function ComplaintSystem() {
-  const { user, profile } = useAuth(); // Need profile to confirm user is set up
+  // Remove userRole and isProfileSetupComplete from useAuth() if not needed elsewhere
+  // Keep user if needed for resolved_by_user_id (or make that null too)
+  const { user } = useAuth(); 
   const [complaints, setComplaints] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   const fetchComplaints = useCallback(async () => {
-    if (!profile && !profile?.is_admin) {
-        // Don't fetch if profile isn't loaded or user isn't admin
-        // The profile check ensures we know the user's branch or admin status
-        // This prevents fetching before the profile is confirmed.
-        // A loading state could be shown based on profile loading from useAuth if needed.
-        setLoading(false);
-        return;
-    }
-
+    // Removed profile setup check
     setLoading(true);
     setError('');
     try {
-        // RLS automatically handles filtering by assigned_branch_id or is_admin
-        // Fetch branch name along with complaint details
         const { data, error: fetchError } = await supabase
             .from('complaints')
             .select(`
@@ -37,16 +34,18 @@ function ComplaintSystem() {
                 status,
                 created_at,
                 resolved_at,
-                branches ( name ) // Fetch the related branch name
+                cost,
+                resolution_comment,
+                expected_resolution_date,
+                branches ( name )
             `)
-            .order('created_at', { ascending: false }); // Show newest first
+            .order('created_at', { ascending: false });
 
         if (fetchError) throw fetchError;
 
-        // Process data to handle nested branch name
         const formattedData = data.map(c => ({
             ...c,
-            branch_name: c.branches?.name || 'N/A' // Handle potential null if branch deleted
+            branch_name: c.branches?.name || 'N/A'
         }));
 
         setComplaints(formattedData || []);
@@ -56,54 +55,22 @@ function ComplaintSystem() {
     } finally {
         setLoading(false);
     }
-  }, [profile]); // Dependency on profile ensures fetch runs when profile is loaded/updated
+  // Removed dependency on isProfileSetupComplete
+  }, []); 
 
   useEffect(() => {
-    fetchComplaints();
-  }, [fetchComplaints]); // Run fetchComplaints when the function reference changes (due to profile change)
-
-  const handleResolve = async (complaintId) => {
-    if (!user) return; // Should not happen if component is protected
-
-    // Optional: Add a confirmation dialog here
-
-    setLoading(true); // Indicate loading state for the update
-    setError('');
-    try {
-      const { error: updateError } = await supabase
-        .from('complaints')
-        .update({
-          status: 'Resolved',
-          resolved_at: new Date().toISOString(), // Record resolution time
-          resolved_by_user_id: user.id // Optional: Track who resolved it
-          // resolution_comment: 'Resolved via system' // Add a comment field later if needed
-        })
-        .eq('id', complaintId);
-
-      if (updateError) throw updateError;
-
-      // Refresh the complaints list after successful update
       fetchComplaints();
+  // Removed dependency on isProfileSetupComplete
+  }, [fetchComplaints]);
 
-    } catch (err) {
-      console.error('Error resolving complaint:', err);
-      setError(`Failed to update complaint status: ${err.message}`);
-      setLoading(false); // Ensure loading is turned off on error
-    }
-    // setLoading(false) is handled in fetchComplaints' finally block after refresh
-  };
+  // Removed canManageComplaints check
 
-  // Render logic based on state
-  if (loading && complaints.length === 0) {
+  if (loading) {
     return <p>Loading complaints...</p>;
   }
 
-  if (!profile && !user) {
-     // Should be handled by routing/AuthContext, but as fallback:
-     return <p>Please log in and select your branch to view complaints.</p>;
-  }
-
-  if (error) {
+   // Simplified error check
+   if (error) {
     return (
         <Alert variant="destructive">
             <AlertTitle>Error</AlertTitle>
@@ -114,17 +81,17 @@ function ComplaintSystem() {
 
   return (
     <div className="container mx-auto p-4 space-y-6">
-      <h1 className="text-3xl font-bold">Complaint Management</h1>
+      <h1 className="text-3xl font-bold">Complaint Management (Prototype - Open Access)</h1>
 
-      {/* Optionally include the form for staff to submit complaints */}
+      {/* Always show form in prototype mode */}
       <div className="mb-8 p-4 border rounded shadow-md">
           <h2 className="text-xl font-semibold mb-4">Submit a New Complaint</h2>
-          <ComplaintForm />
+          <ComplaintForm onComplaintSubmitted={fetchComplaints} />
       </div>
 
       <h2 className="text-2xl font-semibold">Current Complaints</h2>
-      {complaints.length === 0 && !loading ? (
-        <p>No complaints found matching your view.</p>
+      {complaints.length === 0 ? (
+        <p>No complaints found.</p> // Simplified message
       ) : (
         <div className="border rounded-lg overflow-hidden">
            <Table>
@@ -132,38 +99,42 @@ function ComplaintSystem() {
               <TableRow>
                 <TableHead>Reported</TableHead>
                 <TableHead>Branch</TableHead>
-                <TableHead>Description</TableHead>
+                <TableHead className="w-1/3">Description</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Cost (INR)</TableHead>
+                <TableHead className="w-1/4">Resolution/Comment</TableHead>
+                <TableHead>Expected Date</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {complaints.map((complaint) => (
                 <TableRow key={complaint.id}>
-                  <TableCell>{format(new Date(complaint.created_at), 'yyyy-MM-dd HH:mm')}</TableCell>
-                  <TableCell>{complaint.branch_name}</TableCell> {/* Display fetched branch name */}
-                  <TableCell className="whitespace-pre-wrap">{complaint.description}</TableCell>
+                  <TableCell>{format(parseISO(complaint.created_at), 'yyyy-MM-dd HH:mm')}</TableCell>
+                  <TableCell>{complaint.branch_name}</TableCell>
+                  <TableCell className="whitespace-pre-wrap text-sm">{complaint.description}</TableCell>
                   <TableCell>
                      <Badge variant={complaint.status === 'Resolved' ? 'success' : 'destructive'}>
                         {complaint.status}
                      </Badge>
+                     {complaint.status === 'Resolved' && complaint.resolved_at && (
+                         <p className="text-xs text-muted-foreground mt-1">
+                            {format(parseISO(complaint.resolved_at), 'yyyy-MM-dd')}
+                         </p>
+                     )}
+                  </TableCell>
+                  <TableCell className="text-right">{complaint.cost ? complaint.cost.toFixed(2) : '-'}</TableCell>
+                  <TableCell className="whitespace-pre-wrap text-xs text-muted-foreground">{complaint.resolution_comment || '-'}</TableCell>
+                  <TableCell>
+                      {complaint.expected_resolution_date ? format(parseISO(complaint.expected_resolution_date), 'yyyy-MM-dd HH:mm') : '-'}
                   </TableCell>
                   <TableCell>
-                    {complaint.status === 'New' && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleResolve(complaint.id)}
-                        disabled={loading} // Disable button during any loading action
-                      >
-                        Mark Resolved
-                      </Button>
-                    )}
-                    {complaint.status === 'Resolved' && complaint.resolved_at && (
-                         <span className="text-xs text-gray-500">
-                            Resolved: {format(new Date(complaint.resolved_at), 'yyyy-MM-dd')}
-                         </span>
-                    )}
+                    {/* Always show Manage button in prototype */}
+                    <ManageComplaintDialog complaint={complaint} onUpdate={fetchComplaints}>
+                        <Button size="sm" variant="outline">
+                            <Pencil className="h-4 w-4 mr-1" /> Manage
+                        </Button>
+                    </ManageComplaintDialog>
                   </TableCell>
                 </TableRow>
               ))}

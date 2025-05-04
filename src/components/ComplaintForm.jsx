@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient'; // Import the client
 
-function ComplaintForm() {
+function ComplaintForm({ onComplaintSubmitted }) {
   const [branches, setBranches] = useState([]);
   const [selectedBranch, setSelectedBranch] = useState('');
   const [description, setDescription] = useState('');
@@ -64,6 +64,11 @@ function ComplaintForm() {
         ]);
 
       if (error) throw error;
+
+      // Call the callback function on success!
+      if (onComplaintSubmitted) {
+        onComplaintSubmitted();
+      }
 
       setMessage('Complaint submitted successfully!');
       setMessageType('success');

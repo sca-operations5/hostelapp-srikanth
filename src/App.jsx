@@ -1,9 +1,12 @@
 import React from "react";
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
-import { Toaster } from "@/components/ui/toaster";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
+// Import page components directly
 import Dashboard from "@/components/Dashboard";
-import Login from "@/components/Login";
-import Unauthorized from "@/components/Unauthorized";
 import ComplaintSystem from "@/components/ComplaintSystem";
 import AttendanceSystem from "@/components/AttendanceSystem";
 import MessManagement from "@/components/MessManagement";
@@ -17,165 +20,39 @@ import InfrastructureManagement from "@/components/InfrastructureManagement";
 import StaffManagement from "@/components/StaffManagement";
 import StudentManagement from "@/components/StudentManagement";
 import Meetings from "@/components/Meetings";
-import Layout from "@/components/Layout";
+import Layout from "@/components/Layout"; // Keep layout for structure
 import { NotificationProvider } from "@/contexts/NotificationContext";
-import { AuthProvider, useAuth } from "@/contexts/AuthContext";
-import RoleBasedRoute from "@/components/RoleBasedRoute";
-import ProtectedRoute from "@/components/ProtectedRoute";
-import BranchSelector from "@/components/BranchSelector";
+import { AuthProvider } from "@/contexts/AuthContext"; // Keep provider, but its state won't restrict routes
+import { Toaster } from "@/components/ui/toaster"; // Assuming Toaster is needed
 
+// AppContent renders the routes within the Layout
 const AppContent = () => {
-  const { user, profile, loading, error } = useAuth();
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center text-red-600">
-          <p>Error: {error}</p>
-        </div>
-      </div>
-    );
-  }
-
+  // No need for useAuth here for routing purposes anymore
   return (
     <Routes>
-      <Route path="/login" element={!user ? <Login /> : <Navigate to="/" />} />
-      <Route path="/select-branch" element={<BranchSelector />} />
-      <Route path="/unauthorized" element={<Unauthorized />} />
-      <Route
-        path="/"
-        element={
-          <ProtectedRoute>
-            <Layout />
-          </ProtectedRoute>
-        }
-      >
+      {/* Wrap main content routes in Layout */} 
+      <Route path="/" element={<Layout />}>
+        {/* Define routes directly, no wrappers needed for now */}
         <Route index element={<Dashboard />} />
-        {/* Admin and Warden Routes */}
-        <Route
-          path="staff"
-          element={
-            <RoleBasedRoute allowedRoles={['admin', 'warden']}>
-              <StaffManagement />
-            </RoleBasedRoute>
-          }
-        />
-        <Route
-          path="students"
-          element={
-            <RoleBasedRoute allowedRoles={['admin', 'warden']}>
-              <StudentManagement />
-            </RoleBasedRoute>
-          }
-        />
-        {/* Warden and Incharge Routes */}
-        <Route
-          path="complaints"
-          element={
-            <RoleBasedRoute allowedRoles={['admin', 'warden', 'incharge']}>
-              <ComplaintSystem />
-            </RoleBasedRoute>
-          }
-        />
-        <Route
-          path="attendance"
-          element={
-            <RoleBasedRoute allowedRoles={['warden', 'incharge']}>
-              <AttendanceSystem />
-            </RoleBasedRoute>
-          }
-        />
-        {/* Mess Incharge Routes */}
-        <Route
-          path="mess"
-          element={
-            <RoleBasedRoute allowedRoles={['mess_incharge']}>
-              <MessManagement />
-            </RoleBasedRoute>
-          }
-        />
-        <Route
-          path="food-feedback"
-          element={
-            <RoleBasedRoute allowedRoles={['mess_incharge', 'student']}>
-              <FoodFeedback />
-            </RoleBasedRoute>
-          }
-        />
-        {/* Student Routes */}
-        <Route
-          path="leaves"
-          element={
-            <RoleBasedRoute allowedRoles={['student']}>
-              <Leaves />
-            </RoleBasedRoute>
-          }
-        />
-        <Route
-          path="outing-permissions"
-          element={
-            <RoleBasedRoute allowedRoles={['student']}>
-              <OutingPermissions />
-            </RoleBasedRoute>
-          }
-        />
-        {/* Reception Routes */}
-        <Route
-          path="reception-log"
-          element={
-            <RoleBasedRoute allowedRoles={['admin', 'warden', 'incharge']}>
-              <ReceptionLog />
-            </RoleBasedRoute>
-          }
-        />
-        {/* Health Routes */}
-        <Route
-          path="health-log"
-          element={
-            <RoleBasedRoute allowedRoles={['admin', 'warden', 'incharge']}>
-              <HealthLog />
-            </RoleBasedRoute>
-          }
-        />
-        {/* Infrastructure Routes */}
-        <Route
-          path="infrastructure"
-          element={
-            <RoleBasedRoute allowedRoles={['admin', 'warden']}>
-              <InfrastructureManagement />
-            </RoleBasedRoute>
-          }
-        />
-        {/* Transport Routes */}
-        <Route
-          path="transport"
-          element={
-            <RoleBasedRoute allowedRoles={['admin', 'warden']}>
-              <TransportTracking />
-            </RoleBasedRoute>
-          }
-        />
-        {/* Meetings Routes */}
-        <Route
-          path="meetings"
-          element={
-            <RoleBasedRoute allowedRoles={['admin', 'warden', 'incharge']}>
-              <Meetings />
-            </RoleBasedRoute>
-          }
-        />
+        <Route path="staff" element={<StaffManagement />} />
+        <Route path="students" element={<StudentManagement />} />
+        <Route path="complaints" element={<ComplaintSystem />} />
+        <Route path="meetings" element={<Meetings />} />
+        <Route path="attendance" element={<AttendanceSystem />} />
+        <Route path="mess" element={<MessManagement />} />
+        <Route path="food-feedback" element={<FoodFeedback />} />
+        <Route path="leaves" element={<Leaves />} />
+        <Route path="outing-permissions" element={<OutingPermissions />} />
+        <Route path="reception-log" element={<ReceptionLog />} />
+        <Route path="health-log" element={<HealthLog />} />
+        <Route path="infrastructure" element={<InfrastructureManagement />} />
+        <Route path="transport" element={<TransportTracking />} />
+        {/* Add a redirect from old auth paths or a 404 */} 
+        <Route path="*" element={<Navigate to="/" replace />} /> 
       </Route>
+       {/* Define login route outside Layout if kept for later? Or remove completely */}
+       {/* For now, let's remove login route entirely */}
+       {/* <Route path="/login" element={<div>Login Page Removed for Prototype</div>} /> */}
     </Routes>
   );
 };
@@ -183,6 +60,7 @@ const AppContent = () => {
 function App() {
   return (
     <Router>
+      {/* Keep providers, context state won't block routes now */}
       <AuthProvider>
         <NotificationProvider>
           <div className="min-h-screen bg-background">
